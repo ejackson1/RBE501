@@ -1,0 +1,21 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "",
+        "limitSymbolsToIncludedHeaders": true
+      },
+      "includePath": [
+        "/home/ajith/Dynamics_project_ws/devel/include/**",
+        "/opt/ros/noetic/include/**",
+        "/home/ajith/Dynamics_project_ws/src/third_party/gazebo-pkgs/gazebo_grasp_plugin/include/**",
+        "/home/ajith/Dynamics_project_ws/src/third_party/gazebo-pkgs/gazebo_version_helpers/include/**",
+        "/home/ajith/Dynamics_project_ws/src/kortex_driver/include/**",
+        "/home/ajith/Dynamics_project_ws/src/third_party/roboticsgroup_upatras_gazebo_plugins/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ROS"
+    }
+  ],
+  "version": 4
+}

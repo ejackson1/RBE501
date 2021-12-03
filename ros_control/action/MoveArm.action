@@ -1,0 +1,9 @@
+geometry_msgs/PoseStamped ee_pose
+
+bool open
+
+float64 tolerance
+---
+bool grasped
+---
+bool done
