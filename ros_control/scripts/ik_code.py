@@ -1,12 +1,12 @@
 from modern_robotics.core import JacobianSpace
 from numpy.lib.function_base import copy
-from numpy.linalg import norm
+from numpy.linalg import inv, norm
 import functions
 import math
 import numpy as np
 import modern_robotics as mr
 
-lambda = 0.1
+x = 0.1
 
 def rot(x,y,z):
     t1 = np.radians(x)
@@ -33,11 +33,14 @@ def transformation(x,y,z,a,b,c):
     return T
     
 def T2twist(T):
-    Pose = mr.MatrixLog6(T_current)
-    Pose = np.matrix([currentPose(2,1), currentPose(0,2), currentPose(1,0), currentPose(0:2,3)]).T
+    CPose = mr.MatrixLog6(T.T)
+    Pose = np.matrix([CPose(1,0), CPose(0,2), CPose(2,1), CPose(0,3), CPose(1,3), CPose(2,3)])
+    return Pose
 
-def deltaQ(J,lambda,targetPose,currentPose)
+def deltaQ(J,x,targetPose,currentPose):
     #define the damped least squares formula
+    dQ = J.T * inv(J * J.T + (x**2) * np.eye(3)) * (targetPose - currentPose)
+    return dQ
 
 #acquiring values from topics
 
@@ -58,7 +61,7 @@ cQ = currentQ.copy
 #inverse kinematics calculations
 while np.linalg.norm(targetpose - currentPose) > ie-3:
     J = mr.JacobianSpace(S,currentQ).T  
-    #call the deltaQ function
+    deltaQ = deltaQ(J,x,targetPose,currentPose)
     cQ = cQ + deltaQ.T
     T_approaching = mr.FKinSpace(M,S,cQ)
     Approaching_Pose = T2twist(T_approaching) 
