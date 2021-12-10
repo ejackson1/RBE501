@@ -51,23 +51,23 @@ class MoveItPlanner:
             rospy.loginfo("Planning and going to waypoint")
             self.arm_group.go(wait=True)
 
-            current_pose = moveitplanner.get_cartesian_pose(self.arm_group)
-            x = abs(previous_pose.position.x - current_pose.position.x)
-            y = abs(previous_pose.position.y - current_pose.position.y)
-            z = abs(previous_pose.position.z - current_pose.position.z)
-            qx = abs(previous_pose.orientation.x - current_pose.orientation.x)
-            qy = abs(previous_pose.orientation.y - current_pose.orientation.y)
-            qz = abs(previous_pose.orientation.z - current_pose.orientation.z)
-            qw = abs(previous_pose.orientation.w - current_pose.orientation.w)
-            difference = []
-            difference.extend([x,y,z,qx,qy,qz,qw])
+            # current_pose = moveitplanner.get_cartesian_pose(self.arm_group)
+            # x = abs(previous_pose.position.x - current_pose.position.x)
+            # y = abs(previous_pose.position.y - current_pose.position.y)
+            # z = abs(previous_pose.position.z - current_pose.position.z)
+            # qx = abs(previous_pose.orientation.x - current_pose.orientation.x)
+            # qy = abs(previous_pose.orientation.y - current_pose.orientation.y)
+            # qz = abs(previous_pose.orientation.z - current_pose.orientation.z)
+            # qw = abs(previous_pose.orientation.w - current_pose.orientation.w)
+            # difference = []
+            # difference.extend([x,y,z,qx,qy,qz,qw])
 
-            for value in difference:
-                if value < 0.05:            
-                    bool.data = False
-                    return moveToPoseResponse(bool)
-                else:
-                    pass
+            # for value in difference:
+            #     if value < 0.0005:            
+            #         bool.data = False
+            #         return moveToPoseResponse(bool)
+            #     else:
+            #         pass
 
             bool.data = True
             print("Success")
