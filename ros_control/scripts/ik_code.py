@@ -6,7 +6,7 @@ import math
 import numpy as np
 import modern_robotics as mr
 
-x = 0.1
+L = 0.1
 
 def rot(x,y,z):
     t1 = np.radians(x)
@@ -39,7 +39,7 @@ def T2twist(T):
 
 def deltaQ(J,x,targetPose,currentPose):
     #define the damped least squares formula
-    dQ = J.T * inv(J * J.T + (x**2) * np.eye(3)) * (targetPose - currentPose)
+    dQ = J.T * inv(J * J.T + (L**2) * np.eye(3)) * (targetPose - currentPose)
     return dQ
 
 #acquiring values from topics
@@ -59,7 +59,7 @@ targetPose=T2twist(T_target)
 
 cQ = currentQ.copy
 #inverse kinematics calculations
-while np.linalg.norm(targetpose - currentPose) > ie-3:
+while np.linalg.norm(targetPose - currentPose) > ie-3:
     J = mr.JacobianSpace(S,currentQ).T  
     deltaQ = deltaQ(J,x,targetPose,currentPose)
     cQ = cQ + deltaQ.T
