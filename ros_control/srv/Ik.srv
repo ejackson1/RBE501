@@ -1,0 +1,3 @@
+geometry_msgs/Point end_effector_position
+---
+float64[] joint_angles # In metres and degrees
