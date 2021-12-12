@@ -1,0 +1,51 @@
+$(arg prefix)joint_state_controller:
+  type: joint_state_controller/JointStateController
+  publish_rate: 50  
+
+$(arg prefix)joint_1_velocity_controller:
+    joint: $(arg prefix)joint_1
+    pid:
+        p: 3000.0
+        i: 0.0
+        d: 2.0
+    type: velocity_controllers/JointVelocityController
+
+$(arg prefix)joint_2_velocity_controller:
+    joint: $(arg prefix)joint_2
+    pid:
+        p: 50000.0
+        i: 0.0
+        d: 0.0
+    type: velocity_controllers/JointVelocityController
+
+$(arg prefix)joint_3_velocity_controller:
+    joint: $(arg prefix)joint_3
+    pid:
+        p: 3000.0
+        i: 0.0
+        d: 0.0
+    type: velocity_controllers/JointVelocityController
+
+$(arg prefix)joint_4_velocity_controller:
+    joint: $(arg prefix)joint_4
+    pid:
+        p: 50000.0
+        i: 0.0
+        d: 0.0
+    type: velocity_controllers/JointVelocityController
+
+$(arg prefix)joint_5_velocity_controller:
+    joint: $(arg prefix)joint_5
+    pid:
+        p: 750.0
+        i: 0.0
+        d: 0.2
+    type: velocity_controllers/JointVelocityController
+
+$(arg prefix)joint_6_velocity_controller:
+    joint: $(arg prefix)joint_6
+    pid:
+        p: 5000.0
+        i: 0.0
+        d: 1.0
+    type: velocity_controllers/JointVelocityController

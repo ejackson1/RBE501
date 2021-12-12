@@ -110,3 +110,6 @@ def inverse_kinematics(x,y,z,currentQ,roll=0,pitch=0,yaw=0,Jacobian="analytical"
     print("NativeJacobian = {} \n Tranformation matrix = {} \n joint_values = {}".format(Jacobian,mr.FKinSpace(M, Slist, currentQ),currentQ))
     #print(currentQ)        
     return currentQ
+
+
+inverse_kinematics(0.1342, -0.0289, 1.1627, currentQ)

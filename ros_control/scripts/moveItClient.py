@@ -5,10 +5,8 @@ import rospy
 import geometry_msgs.msg
 import math
 from ros_control.srv import moveToPose
-from rospy.core import rospyerr
 from std_msgs.msg import Bool
 from tf.transformations import euler_from_quaternion, quaternion_from_euler
-import tf2_geometry_msgs
 
 def getKey():
     tty.setraw(sys.stdin.fileno())
@@ -32,9 +30,9 @@ def move_arm_client(pose):
         bool = Bool()
         bool.data = True
         if success.data == bool:
-            return print(str(success.data.data) + ", we have a success")
+            return
         else:
-            return print(str(success.data.data) + ", something went wrong")
+            return print(str(success.data.data) + ", unable to find a solution.")
     
     except rospy.ServiceException as e:
         print("Service called failed: %s"%e)
@@ -47,7 +45,7 @@ if __name__ == "__main__":
     Moving around:
     i j k : control direction
     r p y : control angular orientation
-    t/b : control positive (w) or negative (s)
+    t/b : control positive (t) or negative (b)
 
     q : adjust positional increments by 10cm
     e : adjust positional increments by 1 cm
@@ -77,6 +75,7 @@ if __name__ == "__main__":
     direction = 'i'
     deg = 1
 
+    ## Teleop ##
     try:
         print(msg) 
         while True:
