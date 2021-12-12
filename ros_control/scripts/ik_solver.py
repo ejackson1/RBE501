@@ -38,6 +38,8 @@ def twist2ht(S, theta):
         T2 = np.array([0, 0, 0, 1])
         T = np.vstack((T1, T2))
 
+        return T
+
 def fkine(S, M, q):
 
     sumT = np.identity(4)
@@ -45,14 +47,15 @@ def fkine(S, M, q):
     for joint_ang in q:
         SingleS = S[:,index]
         #SingleS = SingleSCol.reshape(1,6)
-        omega = SingleS[0:3]
-        v = SingleS[3:6]
-        R = axisangle2rot(omega, joint_ang)
-        vc = vcomp(omega, joint_ang, v)
-        vc = vc.reshape(3,1)
-        T1 = np.hstack((R, vc))
-        T2 = np.array([0, 0, 0, 1])
-        T = np.vstack((T1, T2))
+        # omega = SingleS[0:3]
+        # v = SingleS[3:6]
+        # R = axisangle2rot(omega, joint_ang)
+        # vc = vcomp(omega, joint_ang, v)
+        # vc = vc.reshape(3,1)
+        # T1 = np.hstack((R, vc))
+        # T2 = np.array([0, 0, 0, 1])
+        # T = np.vstack((T1, T2))
+        T = twist2ht(SingleS, joint_ang)
 
         sumT = np.matmul(sumT, T)
         index += 1
@@ -62,12 +65,10 @@ def fkine(S, M, q):
     return Tfinal
 
 def jacoba(S, M, currentQ):
-    print("todo")
+
     def adjoint(T):
         R = T[0:3,0:3]
         P = T[0:3,3]
-        print(R)
-        #print(P)
         zeros = np.array([[0, 0, 0], [0, 0, 0], [0, 0, 0]])
         adjTop = np.hstack((R, zeros))
         adjBot = np.hstack(((np.matmul(skew(P), R)), R))
@@ -75,23 +76,67 @@ def jacoba(S, M, currentQ):
     
     sumT = np.identity(4)
     index = 0
+    Jacobian = np.zeros((6, 7))
     for joint_ang in currentQ:
         SingleS = S[:,index]
         #SingleS = SingleSCol.reshape(1,6)
-        omega = SingleS[0:3]
-        v = SingleS[3:6]
-        R = axisangle2rot(omega, joint_ang)
-        vc = vcomp(omega, joint_ang, v)
-        vc = vc.reshape(3,1)
-        T1 = np.hstack((R, vc))
-        T2 = np.array([0, 0, 0, 1])
-        T = np.vstack((T1, T2))
-
+        T = twist2ht(SingleS, joint_ang)
         sumT = np.matmul(sumT, T)
+        sAdjoint = adjoint(sumT)
+        sJ = np.matmul(sAdjoint, SingleS)
+        x = 0
+        for value in sJ:
+            Jacobian[x,index] = value
+            x += 1
+
         index += 1
+    #print(Jacobian)
+    fk = fkine(S, M, q)
+    bracketP = skew(fk[0:3,3])
+    Jsw = Jacobian[0:3,:]
+    Jsv = Jacobian[3:6,:]
 
+    analJacobian = np.subtract(Jsv, np.matmul(bracketP, Jsw))
+    #print(analJacobian)
+    return analJacobian
 
+def ik(current_Pose, target_Pose, currentQ, S, M):
+    fixCurrentQ = np.array(np.zeros((1,7)))
 
+    print(current_Pose)
+    print(target_Pose)
+    print(currentQ)
+
+    #rospy.sleep(10)
+    while np.linalg.norm(target_Pose - current_Pose) > 0.001:
+        J_a = jacoba(S, M, currentQ)
+        # lamda = 0.5
+        pose_diff = np.subtract(target_Pose, current_Pose)
+        #print(pose_diff)
+        # mid = np.linalg.inv((np.matmul(J_a, np.transpose(J_a))) + np.multiply(np.multiply(lamda, lamda), np.identity(3)))
+        # deltaQ = np.matmul(np.matmul(np.transpose(J_a), mid), pose_diff)
+        #print(deltaQ)
+
+        deltaQ = np.matmul(np.linalg.pinv(J_a), pose_diff)
+        print(deltaQ)
+        currentQ = deltaQ + currentQ.reshape(7,1)
+        #currentQ = currentQ.reshape(1,7)
+        #print(currentQ)
+        # index = 0
+        # for value in currentQ:
+        #     #print(value)
+        #     fixCurrentQ[0:index] = value
+            
+        #     index += 1
+        # print(fixCurrentQ)
+        print("a")
+        T = fkine(S, M, currentQ)
+        print("T " + str(T))
+        current_Pose = T[0:3,3]
+        current_Pose = current_Pose.reshape(3,1)
+        print("currentPose " + str(current_Pose))
+
+    return currentQ
 
 
 L0 = 154.6 / 1000
@@ -145,20 +190,25 @@ v7 = np.matmul(skew(w7), -p7)
 S7 = np.vstack((w7.reshape(3,1), v7.reshape(3,1)))
 
 S = np.hstack((S1, S2, S3, S4, S5, S6, S7))
-print(S)
+#print(S)
 Mr = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
 Mp = np.array([[0], [-(a1 + a2 + a3 + a4)], [L0 + L1 + L2 + L3 + L4 + L5 + L6 + L7]])
 Mtop = np.hstack((Mr, Mp))
 M = np.vstack((Mtop, [0, 0, 0, 1]))
 
-q = np.array([0, 0, 0, 1.1, 0, 0, 0])
-#print(S)
+q = np.array([0, 0, 0, 0, 0, 1.1, 0])
+#print(q)
 #print(S[:,0])
-T = fkine(S, M, q)
+T = fkine(S, M, q.reshape(7,1))
+#print(T)
 
+#Jacobian = jacoba(S,M,q)
 
-
-
+current_Pose = fkine(S, M, q)[0:3,3]
+current_Pose = current_Pose.reshape(3,1)
+#print(fkine(S, M, q))
+target_Pose = np.array([[0.5], [0.5], [0.5]])
+print(ik(current_Pose, target_Pose, q, S, M))
 
 
 #print(quaternion_rotation_matrix(np.array([0, 0, 0, -1])))

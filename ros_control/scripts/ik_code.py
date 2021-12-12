@@ -68,6 +68,7 @@ Slist = np.array([[0, 0, -1, 0, 0, 0],
     [0, 1, 0, -1.0199, 0, 0],
     [0, 0, -1, 0.0247, 0, 0]]).T
 
+
 M = np.array([[1, 0, 0, 0],
     [0, 1, 0, 0],
     [0, 0, 1, 0],
@@ -112,4 +113,5 @@ def inverse_kinematics(x,y,z,currentQ,roll=0,pitch=0,yaw=0,Jacobian="analytical"
     return currentQ
 
 
-inverse_kinematics(0.1342, -0.0289, 1.1627, currentQ)
+#inverse_kinematics(0.5, 0.5, 0.5, currentQ)
+iksolver_mr(0.5, 0.5, 0.5, currentQ)
