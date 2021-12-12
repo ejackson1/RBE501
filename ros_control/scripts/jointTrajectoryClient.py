@@ -33,6 +33,21 @@ class jointTrajectoryClient:
             rospy.sleep(1)
             self.traj_client.publish(arm_trajectory)
 
+            print("sending trajectories!")
+            goal_positions = [0, 0, 0, 0,
+                0, 0, 0]
+            arm_trajectory = JointTrajectory()
+            arm_trajectory.joint_names = self.arm_names
+            arm_trajectory.points.append(JointTrajectoryPoint())
+            arm_trajectory.points[1].positions = goal_positions
+            arm_trajectory.points[1].velocities = [0, 0, 0, 0, 0, 0, 0]
+            arm_trajectory.points[1].accelerations = [0, 0, 0, 0, 0, 0, 0]
+            arm_trajectory.points[1].time_from_start = rospy.Duration(0.2)
+            rospy.sleep(1)
+            self.traj_client.publish(arm_trajectory)
+
+            
+
             rospy.sleep(8)
             try:
                 self.pos = self.tfBuffer.lookup_transform('world', 'end_effector_link', rospy.Time())
