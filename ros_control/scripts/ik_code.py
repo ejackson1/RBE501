@@ -55,7 +55,7 @@ def transformation(x,y,z,a,b,c):
 def iksolver_mr(x,y,z,currentQ,roll=0,pitch=0,yaw=0):
     T_target=transformation(x,y,z,roll,pitch,yaw) 
     finalQ = mr.IKinSpace(Slist, M, T_target, currentQ, eomg=0.01, ev=0.001)
-    print("MRJacobian = \n Tranformation matrix = {} \n joint_values = {}".format(mr.FKinSpace(M, Slist, finalQ),finalQ))
+    #print("MRJacobian = \n Tranformation matrix = {} \n joint_values = {}".format(mr.FKinSpace(M, Slist, finalQ),finalQ))
     return finalQ
     
 #Initilize all values
@@ -92,7 +92,7 @@ def inverse_kinematics(x,y,z,currentQ,roll=0,pitch=0,yaw=0,Jacobian="analytical"
             current_Pose = T_approaching[0:3,3]
             cost = np.linalg.norm(target_Pose - current_Pose)
             itr = itr+1
-            print(cost,"\r")
+            #print(cost,"\r")
             #print("Iterations = \r",itr)
     else:
         current_Pose = T2twist(T_current)
@@ -110,6 +110,5 @@ def inverse_kinematics(x,y,z,currentQ,roll=0,pitch=0,yaw=0,Jacobian="analytical"
     print("NativeJacobian = {} \n Tranformation matrix = {} \n joint_values = {}".format(Jacobian,mr.FKinSpace(M, Slist, currentQ),currentQ))
     #print(currentQ)        
     return currentQ
-
 
 inverse_kinematics(0.1342, -0.0289, 1.1627, currentQ)
