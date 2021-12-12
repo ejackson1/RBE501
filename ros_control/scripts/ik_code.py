@@ -112,10 +112,4 @@ def inverse_kinematics(x,y,z,currentQ,roll=0,pitch=0,yaw=0,Jacobian="analytical"
     #print(currentQ)        
     return currentQ
 
-<<<<<<< HEAD
-
-#inverse_kinematics(0.5, 0.5, 0.5, currentQ)
-iksolver_mr(0.5, 0.5, 0.5, currentQ)
-=======
 inverse_kinematics(0.1342, -0.0289, 1.1627, currentQ)
->>>>>>> c7ec63cda6fc711a3332971abe4432fa972df45a

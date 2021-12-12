@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
-from numpy.core.fromnumeric import transpose
 import rospy
 import numpy as np
+import matplotlib.pyplot as plt
 
 def skew(vector):
     #print(vector[0])
@@ -101,12 +101,6 @@ def jacoba(S, M, currentQ):
     return analJacobian
 
 def ik(current_Pose, target_Pose, currentQ, S, M):
-    fixCurrentQ = np.array(np.zeros((1,7)))
-
-    print(current_Pose)
-    print(target_Pose)
-    print(currentQ)
-
     #rospy.sleep(10)
     while np.linalg.norm(target_Pose - current_Pose) > 0.001:
         J_a = jacoba(S, M, currentQ)
@@ -122,13 +116,6 @@ def ik(current_Pose, target_Pose, currentQ, S, M):
         currentQ = deltaQ + currentQ.reshape(7,1)
         #currentQ = currentQ.reshape(1,7)
         #print(currentQ)
-        # index = 0
-        # for value in currentQ:
-        #     #print(value)
-        #     fixCurrentQ[0:index] = value
-            
-        #     index += 1
-        # print(fixCurrentQ)
         print("a")
         T = fkine(S, M, currentQ)
         print("T " + str(T))
@@ -138,6 +125,52 @@ def ik(current_Pose, target_Pose, currentQ, S, M):
 
     return currentQ
 
+def quinticpoly(t0, tf, q0, qf, qd0, qdf, qdd0, qddf):
+    
+    a = np.linalg.inv(np.array([[1, t0, t0**2, t0**3, t0**4, t0**5],
+                                [0, 1, 2*t0, 3*t0**2, 4*t0**3, 5*t0**4],
+                                [0, 0, 2, 6*t0, 12*t0**2, 20*t0**3],
+                                [1, tf, tf**2, tf**3, tf**4, tf**5],
+                                [0, 1, 2*tf, 3*tf**2, 4*tf**3, 5*tf**4],
+                                [0, 0, 2, 6*tf, 12*tf**2, 20*tf**3]]))
+    b = np.array([[q0], [qd0], [qdd0], [qf], [qdf], [qddf]])
+
+    c = np.matmul(a, b)
+    return c
+
+def jointProfiles(coefficients, time_spacing, t0, tf):
+    a0 = coefficients[0]
+    a1 = coefficients[1]
+    a2 = coefficients[2]
+    a3 = coefficients[3]
+    a4 = coefficients[4]
+    a5 = coefficients[5]
+    qListnp = np.array([])
+    qdListnp = np.array([])
+    qddListnp = np.array([])
+    times = np.linspace(t0, tf, num= time_spacing)   
+
+    for t in times:
+        q = a0 + a1*t + a2*t**2 + a3*t**3 + a4*t**4 + a5*t**5
+        qd = a1 + 2*a2*t + 3*a3*t**2 + 4*a4*t**3 + 5*a5*t**4
+        qdd = 2*a2 + 6*a3*t + 12*a4*t**2 + 20*a5*t**4
+        qListnp = np.hstack((qListnp, q))
+        qdListnp = np.hstack((qdListnp, qd))
+        qddListnp = np.hstack((qddListnp, qdd))
+
+    plt.figure(1)
+    plt.subplot(311)
+    plt.plot(times, qListnp)
+    plt.title("Q")
+    plt.subplot(312)
+    plt.plot(times, qdListnp)
+    plt.title("Qd")
+    plt.subplot(313)
+    plt.plot(times, qddListnp)
+    plt.title("Qdd")
+    plt.show()
+
+    return (qListnp, qdListnp, qddListnp)
 
 L0 = 154.6 / 1000
 L1 = 128.4 / 1000
@@ -208,7 +241,11 @@ current_Pose = fkine(S, M, q)[0:3,3]
 current_Pose = current_Pose.reshape(3,1)
 #print(fkine(S, M, q))
 target_Pose = np.array([[0.5], [0.5], [0.5]])
-print(ik(current_Pose, target_Pose, q, S, M))
+#print(ik(current_Pose, target_Pose, q, S, M))
+
+#print(quinticpoly(0, 1, 0.4, 0.7, 0, 0, 0, 0))
+
+jointProfiles(quinticpoly(0, 1, 0.4, 0.7, 0, 0, 0, 0), 100, 0, 1)
 
 
 #print(quaternion_rotation_matrix(np.array([0, 0, 0, -1])))
