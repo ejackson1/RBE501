@@ -1,36 +1,20 @@
 #!/usr/bin/env python3
 
 import rospy
-from ros_control.srv import Ik, IkResponse
-from sensor_msgs import JointState
-from std_msgs.msg import Float64
-import math
 import numpy as np
-import modern_robotics as mr
+#import modern_robotics as mr
+#from ros_control.srv import Ik, IkResponse
+from sensor_msgs.msg import JointState
+#from geometry_msgs.msg import Pose
+from std_msgs.msg import Float64
+
 
 currentQ = None
+currentV = None
 
-#Initilize all values
-
-Slist = np.array([[0, 0, -1, 0, 0, 0],
-    [0,1, 0, -.2848, 0, 0],
-    [0, 0, -1, 0.0118, 0, 0],
-    [0, 1, 0, -.7056, 0, 0],
-    [0, 0, -1, 0, 0.0245, 0],
-    [0, 1, 0, -1.0199, 0, 0],
-    [0, 0, -1, 0.0247, 0, 0]]).T
-
-M = np.array([[1, 0, 0, 0],
-    [0, 1, 0, 0],
-    [0, 0, 1, 0],
-    [0, -.0249, 1.1854, 1]]).T;
-
-currentQ= np.array([0, 0, 0, 0, 0, 0, 0]); 
-
-'''########################################################################################'''
-'''*********************************** Inverse Kinematics *********************************'''
-'''########################################################################################'''
-
+# # '''#################################################################################################'''
+# # '''************************************** Inverse Kinematics ***************************************'''
+# # '''#################################################################################################'''
 def rot(x,y,z):
     t1 = np.radians(x)
     c1= np.cos(t1)
@@ -48,11 +32,11 @@ def rot(x,y,z):
     return R
 
 def analytical_Jacobian(Slist,thetalist,M):
-    Js = mr.JacobianSpace(Slist,thetalist)
-    T = mr.FKinSpace(M,Slist,thetalist)
-    sp = mr.VecToso3(T[0:3,3])
-    J_a=Js[3:6,:]-np.dot(sp,Js[0:3,:])
-    return J_a 
+	Js 	= mr.JacobianSpace(Slist,thetalist)
+	T 	= mr.FKinSpace(M,Slist,thetalist)
+	sp 	= mr.VecToso3(T[0:3,3])
+	J_a	= Js[3:6,:] - np.dot(sp,Js[0:3,:])
+	return J_a 
 
 
 def deltaQ(J,targetPose,currentPose,lamda=0.1):
@@ -81,12 +65,28 @@ def transformation(x,y,z,a,b,c):
     T = np.array(np.concatenate((T1,zero),axis=0))
     return T
 
-def iksolver_mr(x,y,z,currentQ,roll=0,pitch=0,yaw=0):
-    T_target=transformation(x,y,z,roll,pitch,yaw) 
-    finalQ = mr.IKinSpace(Slist, M, T_target, currentQ, eomg=0.01, ev=0.001)
-    #print("MRJacobian = \n Tranformation matrix = {} \n joint_values = {}".format(mr.FKinSpace(M, Slist, finalQ),finalQ))
-    return finalQ
+# def iksolver_mr(x,y,z,currentQ,roll=0,pitch=0,yaw=0):
+#     T_target=transformation(x,y,z,roll,pitch,yaw) 
+#     finalQ = mr.IKinSpace(Slist, M, T_target, currentQ, eomg=0.01, ev=0.001)
+#     print("MRJacobian = \n Tranformation matrix = {} \n joint_values = {}".format(mr.FKinSpace(M, Slist, finalQ),finalQ))
+#     return finalQ
     
+#Initilize all values
+
+Slist = np.array([[0, 0, -1, 0, 0, 0],
+    [0,1, 0, -.2848, 0, 0],
+    [0, 0, -1, 0.0118, 0, 0],
+    [0, 1, 0, -.7056, 0, 0],
+    [0, 0, -1, 0, 0.0245, 0],
+    [0, 1, 0, -1.0199, 0, 0],
+    [0, 0, -1, 0.0247, 0, 0]]).T
+
+M = np.array([[1, 0, 0, 0],
+    [0, 1, 0, 0],
+    [0, 0, 1, 0],
+    [0, -.0249, 1.1854, 1]]).T
+
+currentQ= np.array([0, 0, 0, 0, 0, 0, 0]); 
 
 def inverse_kinematics(x,y,z,currentQ,roll=0,pitch=0,yaw=0,Jacobian="analytical"):
     T_target=transformation(x,y,z,roll,pitch,yaw) 
@@ -125,7 +125,7 @@ def inverse_kinematics(x,y,z,currentQ,roll=0,pitch=0,yaw=0,Jacobian="analytical"
     return currentQ
 
 
-'''########################################  Server Continuation ######################################'''
+# '''########################################  Server Continuation ######################################'''
 def callback(req):
 	global currentQ
 	position = req.end_effector_position
@@ -133,15 +133,19 @@ def callback(req):
 	return IkResponse(targetQ)
 
 def joint_callback(joint_state):
-	global currrentQ
-	currrentQ = joint_state.position
+    global currentQ
+    currentQ = joint_state.position
+    currentV = joint_state.velocity
+    rospy.loginfo(currentQ)
+    rospy.loginfo(currentV)
+
 
 if __name__ == '__main__':
 	rospy.init_node('inverse_kinematics_node', anonymous=True)
-	rospy.Subscriber("joint_states", JointState, joint_callback)
+	rospy.Subscriber("/my_gen3/joint_states", JointState, joint_callback)
+	rospy.Subscriber("")
+	rospy.spin()
 	rospy.Service('inverse_kinematics', Ik, callback)
-	
-	
 	pub_1 = rospy.Publisher("/my_gen3/joint_1_position_controller/command",Float64, queue_size=10)
 	pub_2 = rospy.Publisher("/my_gen3/joint_2_position_controller/command",Float64, queue_size=10)
 	pub_3 = rospy.Publisher("/my_gen3/joint_3_position_controller/command",Float64, queue_size=10)
