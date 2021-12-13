@@ -12,21 +12,21 @@ To move with a selected roll pitch or yaw, press r, p, or y. The default angle w
 
 ## MoveIt Based Control
 Please use a different terminal for each command
-
+```
 $ roslaunch kortex_gazebo spawn_kortex_robot.launch
 $ roslaunch ros_control moveItServer.launch
 $ rosrun ros_control moveItClient.py
-
+```
 Notably, this code will initalize the robot EE to be not in the home configuration. 
 
 ## Trajectory & Position Based Control
 
 Please use a different terminal for each command
-
+```
 $ roslaunch kortex_gazebo spawn_kortex_robot.launch
 $ rosrun ros_control jointTrajectoryClient.py
 $ rosrun ros_control ik_solver.py
-
+```
 Please note, the jointTrajectoryClient.py was misnamed and actually serves as a service. The ik_solver.py is the true client. 
 
 The user input on the terminal will allow the user to select for trajectory or position based control as well as the type of jacobian used. The analytical jacobian will not calculate orientation while the space jacobian will. So, if the teleop mode requires a specific orientation, select the space jacobian.
