@@ -145,15 +145,15 @@ class inverseKinematics:
                 J_a = self.jacobx(S, M, currentQ, jacobian)
                 #print(J_a)
                 print(np.linalg.norm(target_Pose - current_Pose))
-                #lamda = 0.5
+                lamda = 1
                 pose_diff = np.subtract(target_Pose, current_Pose)
                 #print(pose_diff)
-                #mid = np.linalg.inv((np.matmul(J_a, np.transpose(J_a))) + np.multiply(np.multiply(lamda, lamda), np.identity(3)))
-                #deltaQ = np.matmul(np.matmul(np.transpose(J_a), mid), pose_diff)
+                mid = np.linalg.inv((np.matmul(J_a, np.transpose(J_a))) + np.multiply(np.multiply(lamda, lamda), np.identity(3)))
+                deltaQ = np.matmul(np.matmul(np.transpose(J_a), mid), pose_diff)
                 #print(deltaQ)
                 #print(currentQ)
                 #print(pose_diff)
-                deltaQ = np.matmul(np.linalg.pinv(J_a), pose_diff)
+                #deltaQ = np.matmul(np.linalg.pinv(J_a), pose_diff)
 
                 #deltaQ = np.matmul(np.transpose(J_a), pose_diff)
 
@@ -266,6 +266,7 @@ class inverseKinematics:
         currPose = currPose.reshape(3,1)
 
         if jacobian == 'analytical':
+            print("a")
             desiredJointAngs = self.ik(currPose, goal_Pose, currentAngles, S, M, jacobian)
             #print(desiredJointAngs)
             if control == 'pos':
@@ -488,30 +489,20 @@ if __name__ == "__main__":
     Mtop = np.hstack((Mr, Mp))
     M = np.vstack((Mtop, [0, 0, 0, 1]))
 
-    q = np.array([0, 0.26, 3.14, -2.27, 0, 0.95, 1.57])
-    #q = np.array([0, -1.1, -1.1, 0, 0, 1.1, 0])
-
-    #print(M)
-    #print(S)
+    # Hardcoded "home" position
+    #q = np.array([0, 0.26, 3.14, -2.27, 0, 0.95, 1.57])
+   
     q = np.array(ik.currentQ)
-    print(q)
+  
 
     #print(S[:,0])
     T = ik.fkine(S, M, q.reshape(7,1))
-    print(T)
-
-    #Jacobian = jacoba(S,M,q)
-    #print(ik.jacoba(S,M,q.reshape(7,1)))
+ 
 
     current_Pose = ik.fkine(S, M, q)[0:3,3]
     current_Pose = current_Pose.reshape(3,1)
     #print(fkine(S, M, q))
     target_Pose = np.array([[0.3], [0.4], [0.5]])
-    #print(ik.ik(current_Pose, target_Pose, q, S, M))
-
-    #print(quinticpoly(0, 1, 0.4, 0.7, 0, 0, 0, 0))
-
-    #ik.jointProfiles(ik.quinticpoly(0, 1, 0.4, 0.7, 0, 0, 0, 0), 100, 0, 1)
     tf = 1
     time_spacing = 10
     #ik.jointTrajectory(target_Pose, q, S, M, 30, tf)
@@ -564,7 +555,7 @@ if __name__ == "__main__":
     u = input("Enter 0 for Trajectory Controller. Enter 1 for Position Controller\n")
     if u == "0":
         control = 'traj'
-        pose_goal = T[0:3,3].reshape(3,1)
+        #pose_goal = T[0:3,3].reshape(3,1)
     elif u == "1":
         control = 'pos'
     else:
@@ -660,7 +651,7 @@ if __name__ == "__main__":
                 
                 
                 elif key in angularBindings:
-                    time_spacing = 5
+                    time_spacing = 2
                     if key == 'r':
                         if deg == 1:
                             r = R.from_matrix(pose_goal[0:3,0:3])
