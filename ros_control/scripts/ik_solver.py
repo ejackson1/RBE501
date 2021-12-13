@@ -1,17 +1,40 @@
 #!/usr/bin/env python3
 
+import sys, select, termios, tty
 import rospy
 import numpy as np
+from std_msgs.msg import Float64, Bool
+from sensor_msgs.msg import JointState
+from ros_control.srv import jointTraj
 import matplotlib.pyplot as plt
+import modern_robotics as mr
+
 
 class inverseKinematics:
     def __init__(self) -> None: 
-        #rospy.loginfo("Initalizing inverse kinematics node")
+        rospy.loginfo("Initalizing inverse kinematics node")
+        rospy.Subscriber("/my_gen3/joint_states", JointState, self.joint_callback)
 
-        #rospy.init_node("Inverse Kinematics Node", anonymous=True)
+        rospy.init_node("ik_Node", anonymous=True)
 
         pass
     
+
+    def joint_callback(self, joint_state):
+        self.currentQ = joint_state.position
+        self.currentV = joint_state.velocity
+
+    def getKey(self):
+        tty.setraw(sys.stdin.fileno())
+        rlist, _, _ = select.select([sys.stdin], [], [], 0.1)
+        if rlist:
+            key = sys.stdin.read(1)
+        else:
+            key = ''
+
+        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)
+        return key
+
     def skew(self, vector):
         #print(vector[0])
         Skew = np.array([[0, -vector[2], vector[1]],
@@ -102,27 +125,37 @@ class inverseKinematics:
     
     def ik(self, current_Pose, target_Pose, currentQ, S, M):
         #rospy.sleep(10)
+        index = 0
         while np.linalg.norm(target_Pose - current_Pose) > 0.001:
             J_a = self.jacoba(S, M, currentQ)
-            # lamda = 0.5
+            #print(J_a)
+            print(np.linalg.norm(target_Pose - current_Pose))
+            #lamda = 0.5
             pose_diff = np.subtract(target_Pose, current_Pose)
             #print(pose_diff)
-            # mid = np.linalg.inv((np.matmul(J_a, np.transpose(J_a))) + np.multiply(np.multiply(lamda, lamda), np.identity(3)))
-            # deltaQ = np.matmul(np.matmul(np.transpose(J_a), mid), pose_diff)
+            #mid = np.linalg.inv((np.matmul(J_a, np.transpose(J_a))) + np.multiply(np.multiply(lamda, lamda), np.identity(3)))
+            #deltaQ = np.matmul(np.matmul(np.transpose(J_a), mid), pose_diff)
             #print(deltaQ)
-
+            #print(currentQ)
+            #print(pose_diff)
             deltaQ = np.matmul(np.linalg.pinv(J_a), pose_diff)
-            print(deltaQ)
+
+            #deltaQ = np.matmul(np.transpose(J_a), pose_diff)
+
+
             currentQ = deltaQ + currentQ.reshape(7,1)
             #currentQ = currentQ.reshape(1,7)
             #print(currentQ)
-            print("a")
+            #print("a")
             T = self.fkine(S, M, currentQ)
-            print("T " + str(T))
+            #print("T " + str(T))
             current_Pose = T[0:3,3]
             current_Pose = current_Pose.reshape(3,1)
-            print("currentPose " + str(current_Pose))
-
+            #print(current_Pose)
+            index +=1
+            #print(index)
+            #print("currentPose " + str(current_Pose))
+        #print(currentQ)
         return currentQ
 
     def quinticpoly(self, t0, tf, q0, qf, qd0, qdf, qdd0, qddf):
@@ -137,6 +170,36 @@ class inverseKinematics:
 
         c = np.matmul(a, b)
         return c
+    
+    # def transformation(self, x,y,z,a,b,c):
+    #     R = rot(a,b,c)
+    #     p = np.matrix([x,y,z])
+    #     #print("Linear Cordinates (p): ", p)
+    #     #print("\n")
+    #     zero=np.matrix([0,0,0,1])
+    #     T1 = np.concatenate((R,p.T),axis=1)
+    #     T = np.array(np.concatenate((T1,zero),axis=0))
+    #     return T
+    
+    # def inverse_kinematics(self, x,y,z,currentQ,roll=0,pitch=0,yaw=0,S, MJacobian="analytical"):
+    #     T_target=self.transformation(x,y,z,roll,pitch,yaw) 
+    #     T_current=mr.FKinSpace(M,S,currentQ)
+    #     cost,itr =0,0
+
+    #     current_Pose  = T_current[0:3,3]
+    #     target_Pose   = T_target[0:3,3]
+    #     #inverse kinematics calculations
+    #     while np.linalg.norm(target_Pose - current_Pose) > 0.001:   
+    #         J_a = analytical_Jacobian(Slist,currentQ,M)
+    #         dQ = deltaQ(J_a,target_Pose,current_Pose,lamda=0.001)
+    #         currentQ = currentQ + dQ
+    #         T_approaching = mr.FKinSpace(M,Slist,currentQ)
+    #         current_Pose = T_approaching[0:3,3]
+    #         cost = np.linalg.norm(target_Pose - current_Pose)
+    #         itr = itr+1
+
+    #     return currentQ
+
 
     def jointProfiles(self, coefficients, time_spacing, t0, tf):
         a0 = coefficients[0]
@@ -158,6 +221,8 @@ class inverseKinematics:
             qdListnp = np.hstack((qdListnp, qd))
             qddListnp = np.hstack((qddListnp, qdd))
 
+        # Turn on figures to show plots :)
+
         # plt.figure(1)
         # plt.subplot(311)
         # plt.plot(times, qListnp)
@@ -169,26 +234,85 @@ class inverseKinematics:
         # plt.plot(times, qddListnp)
         # plt.title("Qdd")
         # plt.show()
-
         return (qListnp, qdListnp, qddListnp, times)
 
    
-    def jointTrajectory(self, goal_Pose, currentAngles, S, M, time_spacing):
+    def jointTrajectory(self, goal_Pose, currentAngles, S, M, time_spacing, tf):
+        
         T = self.fkine(S, M, currentAngles)
         currPose = T[0:3, 3]
+        currPose = currPose.reshape(3,1)
 
         index = 0
         desiredJointAngs = self.ik(currPose, goal_Pose, currentAngles, S, M)
+        #print(desiredJointAngs)
+
+        qList = np.array(np.zeros((1,time_spacing)))
+        qdList = np.array(np.zeros((1,time_spacing)))
+        qddList = np.array(np.zeros((1,time_spacing)))
+        timeList = []
         for angle in desiredJointAngs:
             
             quinticCofs = self.quinticpoly(0, 1, currentAngles[index], angle, 0, 0, 0, 0)
-            (qListnp, qdListnp, qddListnp, times) = self.jointProfiles(quinticCofs, time_spacing, 0, 1)
-
+            (qListnp, qdListnp, qddListnp, times) = self.jointProfiles(quinticCofs, time_spacing, 0, tf)
+            qList = np.vstack((qList, qListnp))
+            qdList = np.vstack((qdList, qdListnp))
+            qddList = np.vstack((qddList, qddListnp))
             
-
             index += 1
+        
+        # Remove initial zeros 
+        qList = np.delete(qList, 0, 0)
+        qdList = np.delete(qdList, 0, 0)
+        qddList = np.delete(qddList, 0, 0)
+
+        # Turn numpy array into floating points of lists for each joint
+        q1 = [float(element) for element in qList[0,:]]
+        q2 = [float(element) for element in qList[1,:]]
+        q3 = [float(element) for element in qList[2,:]]
+        q4 = [float(element) for element in qList[3,:]]
+        q5 = [float(element) for element in qList[4,:]]
+        q6 = [float(element) for element in qList[5,:]]
+        q7 = [float(element) for element in qList[6,:]]
+
+        qd1 = [float(element) for element in qdList[0,:]]
+        qd2 = [float(element) for element in qdList[1,:]]
+        qd3 = [float(element) for element in qdList[2,:]]
+        qd4 = [float(element) for element in qdList[3,:]]
+        qd5 = [float(element) for element in qdList[4,:]]
+        qd6 = [float(element) for element in qdList[5,:]]
+        qd7 = [float(element) for element in qdList[6,:]]
+
+        qdd1 = [float(element) for element in qddList[0,:]]
+        qdd2 = [float(element) for element in qddList[1,:]]
+        qdd3 = [float(element) for element in qddList[2,:]]
+        qdd4 = [float(element) for element in qddList[3,:]]
+        qdd5 = [float(element) for element in qddList[4,:]]
+        qdd6 = [float(element) for element in qddList[5,:]]
+        qdd7 = [float(element) for element in qddList[6,:]]
+
+        # Shift times list over by one increment
+        timeList = [float(element + times[1]) for element in times]
+        print("here")
+        #rospy.wait_for_service('/quintic', jointTraj)
+
+        try:
+            c = rospy.ServiceProxy('/quintic', jointTraj)
+            success = c(q1, q2, q3, q4, q5, q6, q7,
+                        qd1, qd2, qd3, qd4, qd5, qd6, qd7, 
+                        qdd1, qdd2, qdd3, qdd4, qdd5, qdd6, qdd7, timeList)
+            bool = Bool()
+            bool.data = True            
+            if success.data == bool:
+                return
+            else:
+                return print(str(success.data.data) + ", unable to find a solution.")
+        except Exception as e:
+            print(e)
+
 
         return
+
 
 
 if __name__ == "__main__":
@@ -252,31 +376,206 @@ if __name__ == "__main__":
     Mtop = np.hstack((Mr, Mp))
     M = np.vstack((Mtop, [0, 0, 0, 1]))
 
-    q = np.array([0, 0, 0, 0, 0, 1.1, 0])
+    q = np.array([0, 0.26, 3.14, -2.27, 0, 0.95, 1.57])
+    #q = np.array([0, -1.1, -1.1, 0, 0, 1.1, 0])
 
-    
+    #print(M)
+    #print(S)
+    q = np.array(ik.currentQ)
+    print(q)
 
-        #print(q)
     #print(S[:,0])
     T = ik.fkine(S, M, q.reshape(7,1))
-    #print(T)
+    print(T)
 
     #Jacobian = jacoba(S,M,q)
+    #print(ik.jacoba(S,M,q.reshape(7,1)))
 
     current_Pose = ik.fkine(S, M, q)[0:3,3]
     current_Pose = current_Pose.reshape(3,1)
     #print(fkine(S, M, q))
-    target_Pose = np.array([[0.5], [0.5], [0.5]])
-    #print(ik(current_Pose, target_Pose, q, S, M))
+    target_Pose = np.array([[0.3], [0.4], [0.5]])
+    #print(ik.ik(current_Pose, target_Pose, q, S, M))
 
     #print(quinticpoly(0, 1, 0.4, 0.7, 0, 0, 0, 0))
 
     #ik.jointProfiles(ik.quinticpoly(0, 1, 0.4, 0.7, 0, 0, 0, 0), 100, 0, 1)
+    tf = 1
+    time_spacing = 10
+    #ik.jointTrajectory(target_Pose, q, S, M, 30, tf)
+    #jointTrajectory(self, goal_Pose, currentAngles, S, M, time_spacing):
 
-    ik.jointTrajectory(q, np.array([1, 2, 3, 4, 5, 6, 7]))
+    msg = """
+    Control Your Arm!
+    ---------------------------
+    Moving around:
+    i j k : control direction
+    r p y : control angular orientation
+    t/b : control positive (t) or negative (b)
 
-    #print(quaternion_rotation_matrix(np.array([0, 0, 0, -1])))
+    q : adjust positional increments by 10cm
+    e : adjust positional increments by 1 cm
+    w : adjust angular position by 1deg
+    x : adjust angular position by 15deg
 
-    #print(vcomp(np.array([1,2,3]), np.array([1]), np.array([[1], [1], [1]])))
+    m to quit
+    """
 
-    #print(fkine(np.array([1, 0, 0, 0, 0, 1]), np.array([[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 1]]), np.array([[2]])))
+    settings = termios.tcgetattr(sys.stdin)    
+
+    directionBindings = ['i', 'j', 'k']
+    angularBindings = ['r', 'p', 'y']
+    posNegBindings = ['t', 'b']
+    positionalBindings = ['q', 'e']
+    angPositionalBindings = ['w', 'x']
+    
+    posNeg = 1
+    direction = 'i'
+    deg = 1
+    T = ik.fkine(S, M, q.reshape(7,1))
+    pose_goal = T[0:3,3].reshape(3,1)
+
+    ## Teleop ##
+    try:
+        print(msg) 
+        while True:
+            key = ik.getKey()
+            if key in directionBindings:
+                if key == 'i':
+                    direction = 'i'
+                elif key == 'j':
+                    direction = 'j'
+                elif key == 'k':
+                    direction = 'k'
+
+            elif key in positionalBindings:
+                if key == 'q':
+                    if direction == 'i':
+                        pose_goal[0] += (0.1 * posNeg)
+                        ik.jointTrajectory(pose_goal, np.array(ik.currentQ), S, M, time_spacing, tf)
+                    elif direction == 'j':
+                        pose_goal[1] += (0.1 * posNeg)
+                        ik.jointTrajectory(pose_goal, np.array(ik.currentQ), S, M, time_spacing, tf)
+                    elif direction == 'k':
+                        pose_goal[2] += (0.1 * posNeg)
+                        ik.jointTrajectory(pose_goal, np.array(ik.currentQ), S, M, time_spacing, tf)
+                
+                elif key == 'e':
+                    if direction == 'i':
+                        pose_goal[0] += (0.01 * posNeg)
+                        ik.jointTrajectory(pose_goal, np.array(ik.currentQ), S, M, time_spacing, tf)
+                    elif direction == 'j':
+                        pose_goal[1] += (0.01 * posNeg)
+                        ik.jointTrajectory(pose_goal, np.array(ik.currentQ), S, M, time_spacing, tf) 
+                    elif direction == 'k':
+                        pose_goal[2] += (0.01 * posNeg)
+                        ik.jointTrajectory(pose_goal, np.array(ik.currentQ), S, M, time_spacing, tf)
+            
+            
+            # elif key in angularBindings:
+            #     if key == 'r':
+            #         if deg == 1:
+            #             qx = pose_goal.orientation.x
+            #             qy = pose_goal.orientation.y
+            #             qz = pose_goal.orientation.z
+            #             qw = pose_goal.orientation.w
+            #             (roll, pitch, yaw) = euler_from_quaternion([qx, qy, qz, qw])
+            #             roll += (posNeg * degs2rads(deg))                        
+            #             q = quaternion_from_euler(roll, pitch, yaw, axes='sxyz')
+            #             pose_goal.orientation.x = q[0]
+            #             pose_goal.orientation.y = q[1]
+            #             pose_goal.orientation.z = q[2]
+            #             pose_goal.orientation.w = q[3]
+            #             move_arm_client(pose_goal)
+                    
+            #         elif deg == 15:
+            #             qx = pose_goal.orientation.x
+            #             qy = pose_goal.orientation.y
+            #             qz = pose_goal.orientation.x
+            #             qw = pose_goal.orientation.w
+            #             (roll, pitch, yaw) = euler_from_quaternion([qx, qy, qz, qw])
+            #             roll += (posNeg * degs2rads(deg))                        
+            #             q = quaternion_from_euler(roll, pitch, yaw, axes='sxyz')
+            #             pose_goal.orientation.x = q[0]
+            #             pose_goal.orientation.y = q[1]
+            #             pose_goal.orientation.z = q[2]
+            #             pose_goal.orientation.w = q[3]
+            #             move_arm_client(pose_goal)
+
+            #     elif key == 'p':
+            #         if deg == 1:
+            #             qx = pose_goal.orientation.x
+            #             qy = pose_goal.orientation.y
+            #             qz = pose_goal.orientation.z
+            #             qw = pose_goal.orientation.w
+            #             (roll, pitch, yaw) = euler_from_quaternion([qx, qy, qz, qw])
+            #             pitch += (posNeg * degs2rads(deg))                        
+            #             q = quaternion_from_euler(roll, pitch, yaw, axes='sxyz')
+            #             pose_goal.orientation.x = q[0]
+            #             pose_goal.orientation.y = q[1]
+            #             pose_goal.orientation.z = q[2]
+            #             pose_goal.orientation.w = q[3]
+            #             move_arm_client(pose_goal)
+            #         elif deg == 15:
+            #             qx = pose_goal.orientation.x
+            #             qy = pose_goal.orientation.y
+            #             qz = pose_goal.orientation.z
+            #             qw = pose_goal.orientation.w
+            #             (roll, pitch, yaw) = euler_from_quaternion([qx, qy, qz, qw])
+            #             pitch += (posNeg * degs2rads(deg))                        
+            #             q = quaternion_from_euler(roll, pitch, yaw, axes='sxyz')
+            #             pose_goal.orientation.x = q[0]
+            #             pose_goal.orientation.y = q[1]
+            #             pose_goal.orientation.z = q[2]
+            #             pose_goal.orientation.w = q[3]
+            #             move_arm_client(pose_goal)
+
+            #     elif key == 'y':
+            #         if deg == 1:
+            #             qx = pose_goal.orientation.x
+            #             qy = pose_goal.orientation.y
+            #             qz = pose_goal.orientation.z
+            #             qw = pose_goal.orientation.w
+            #             (roll, pitch, yaw) = euler_from_quaternion([qx, qy, qz, qw])
+            #             yaw += (posNeg * degs2rads(deg))                        
+            #             q = quaternion_from_euler(roll, pitch, yaw, axes='sxyz')
+            #             pose_goal.orientation.x = q[0]
+            #             pose_goal.orientation.y = q[1]
+            #             pose_goal.orientation.z = q[2]
+            #             pose_goal.orientation.w = q[3]
+            #             move_arm_client(pose_goal)
+            #         elif deg == 15:
+            #             qx = pose_goal.orientation.x
+            #             qy = pose_goal.orientation.y
+            #             qz = pose_goal.orientation.z
+            #             qw = pose_goal.orientation.w
+            #             (roll, pitch, yaw) = euler_from_quaternion([qx, qy, qz, qw])
+            #             yaw += (posNeg * degs2rads(deg))                        
+            #             q = quaternion_from_euler(roll, pitch, yaw, axes='sxyz')
+            #             pose_goal.orientation.x = q[0]
+            #             pose_goal.orientation.y = q[1]
+            #             pose_goal.orientation.z = q[2]
+            #             pose_goal.orientation.w = q[3]
+            #             move_arm_client(pose_goal)
+
+
+            elif key in posNegBindings:
+                if key == 't':
+                    posNeg = 1
+                elif key == 'b':
+                    posNeg = -1
+            
+            # elif key in angPositionalBindings:
+            #     if key == 'w':
+            #         deg = 1
+            #     elif key == 'x':
+            #         deg = 15
+
+            elif key == 'm':
+                break
+            
+            else:
+                pass
+
+    except Exception as e:
+        print(e)

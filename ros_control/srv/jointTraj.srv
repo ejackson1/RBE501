@@ -1,0 +1,24 @@
+float64[] q1
+float64[] q2
+float64[] q3
+float64[] q4
+float64[] q5
+float64[] q6
+float64[] q7
+float64[] qd1
+float64[] qd2
+float64[] qd3
+float64[] qd4
+float64[] qd5
+float64[] qd6
+float64[] qd7
+float64[] qdd1
+float64[] qdd2
+float64[] qdd3
+float64[] qdd4
+float64[] qdd5
+float64[] qdd6
+float64[] qdd7
+float64[] times
+---
+std_msgs/Bool data

@@ -2,7 +2,7 @@
 
 import rospy
 import numpy as np
-#import modern_robotics as mr
+import modern_robotics as mr
 #from ros_control.srv import Ik, IkResponse
 from sensor_msgs.msg import JointState
 #from geometry_msgs.msg import Pose
